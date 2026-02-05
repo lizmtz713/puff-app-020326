@@ -27,19 +27,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
-        if (userDoc.exists()) {
-          setUser({ id: fbUser.uid, ...userDoc.data() } as User);
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+        try {
+          setFirebaseUser(fbUser);
+          if (fbUser) {
+            const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
+            if (userDoc.exists()) {
+              setUser({ id: fbUser.uid, ...userDoc.data() } as User);
+            }
+          } else {
+            setUser(null);
+          }
+        } catch (err) {
+          console.error('Auth state error:', err);
+          setUser(null);
         }
-      } else {
-        setUser(null);
-      }
+        setLoading(false);
+      });
+      return unsubscribe;
+    } catch (err) {
+      console.error('Auth init error:', err);
       setLoading(false);
-    });
-    return unsubscribe;
+      return () => {};
+    }
   }, []);
 
   const signIn = async (email: string, password: string) => {
